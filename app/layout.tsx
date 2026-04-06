@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Bricolage_Grotesque, Geist } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/navbar";
+import { ClerkProvider } from "@clerk/nextjs";
 
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
@@ -11,7 +12,7 @@ const bricolage = Bricolage_Grotesque({
 });
 
 export const metadata: Metadata = {
-  title: "Makan Bang",
+  title: "converso",
   description: "Real-time AI Teaching Platform",
 };
 
@@ -23,8 +24,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${bricolage.variable} antialiased`}>
-        <Navbar />
+        <ClerkProvider appearance={{ variables: {colorPrimary: '#fe5933'}}}>
+          <Navbar />
           {children}
+        </ClerkProvider>
       </body>
     </html>
   );
