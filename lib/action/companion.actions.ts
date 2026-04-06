@@ -42,3 +42,13 @@ query = query.range((page - 1) * limit, page * limit - 1);
     
         return companions;
     }
+
+export const getCompanion = async (id: string) => {
+    const supabase = createSupabaseClient();
+
+    const { data, error } = await supabase.from('companions').select().eq('id', id);
+
+    if (error) return console.log(error);
+
+    return data[0];
+}
