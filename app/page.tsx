@@ -2,14 +2,25 @@ import CompanionCard from '@/components/companioncard'
 import CompanionList from '@/components/companionlist'
 import Cta from '@/components/CTA'
 import { recentSessions } from '@/constants'
+import { getAllCompanions, getRecentSession } from '@/lib/action/companion.actions'
+import { getSubjectColor } from '@/lib/utils'
 
-const Page = () => {
+const Page = async() => {
+  // const companions = await getAllCompanions({limit: 3});
+  // const recentSessionCompanions = await getRecentSession(limit : 10);
   return (
     <main>
       <h1>Popular Companions</h1>
 
       <section className="home-section">
+        {/* {companions.map((companion) => (
           <CompanionCard 
+            key={companion.id}
+            {...companion}
+            color={getSubjectColor(companion.subject)}
+          />
+        ))} */}
+         <CompanionCard 
             id="123"
             name="Neura the Brainy Explorer"
             topic="Neural Networks of the Brain"

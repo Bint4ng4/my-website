@@ -255,6 +255,7 @@ import { createCompanion } from "@/lib/action/companion.actions"
                     type="number"
                     placeholder="15"
                     {...field}
+                    onChange={(e) => field.onChange(e.target.valueAsNumber)}
                     className="input"
                   />
                   {fieldState.invalid && (

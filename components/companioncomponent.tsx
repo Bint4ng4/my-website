@@ -5,6 +5,7 @@ import Lottie, { LottieRefCurrentProps } from 'lottie-react';
 import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react'
 import soundwaves from '@/constants/soundwaves.json'
+import { addToSessionHistory } from '@/lib/action/companion.actions';
 
 enum CallStatus {
     INACTIVE = 'INACTIVE',
@@ -18,6 +19,7 @@ const CompanionComponent = ({ companionId, subject, name, topic, userName,
         const [callStatus, setCallStatus] = useState<CallStatus>(CallStatus.INACTIVE);
         const [isSpeaking, setIsSpeaking] = useState(false);
         const [isMuted, setMuted] = useState(false);
+        const [message, setMessage] = useState<SavedMessage[]>([ ]);
 
         const lottieRef = useRef<LottieRefCurrentProps>(null);
 
@@ -32,8 +34,16 @@ const CompanionComponent = ({ companionId, subject, name, topic, userName,
             const onCallStart = () => setCallStatus(CallStatus.ACTIVE);
 
             const onCallEnd =() => setCallStatus(CallStatus.FINISHED);
+            addToSessionHistory(companionId)
 
-            const onMessage = () => {}
+            const onMessage = (message: Message) => {
+                if(message.type === 'transcript' && message.transcriptType === 'final')
+                {
+                    const newMessage = { role: message.role, content: message.transcript}
+
+                    setMessage((prev)=>[newMessage, ...prev])
+                }
+            }
 
             const onSpeechStart = () => setIsSpeaking(true)
             const onSpeechEnd = () => setIsSpeaking(false)
@@ -92,7 +102,7 @@ const CompanionComponent = ({ companionId, subject, name, topic, userName,
         }
   return (
     <section className="flex flex-col h-[70vh]">
-        <section className="flex gap-8 mas-sm:flex-col">
+        <section className="flex gap-8 max-sm:flex-col">
             <div className="companion-section">
             <div className="companion-avatar" style={{backgroundColor: getSubjectColor(subject)}}>
                 <div className={cn('absolute transition-ocupacity duration-1001', callStatus === CallStatus.FINISHED || callStatus === CallStatus.INACTIVE ? 'opacity-100' : 'opacity-0', callStatus === CallStatus.CONNECTING && 'opacity-100 animate-pulse')}>
@@ -107,15 +117,22 @@ const CompanionComponent = ({ companionId, subject, name, topic, userName,
                         />
                     </div>
                     </div>
-                <p className="font-bold text-2xl">{name}</p>
+                <p className="font-bold text-2xl ">{name}</p>
             </div>
             <div className="user-section"> 
-                <div>
-                    <Image src={userImage} alt={userName} width={130} height={130} className="w-auto h-auto rounded-lg" />
-                </div>
-                <p className="font-bold text-2xl"> 
+                
+                <div className="user-avatar">
+                    <Image 
+                        src={userImage} 
+                        alt={userName} 
+                        width={130} 
+                        height={130} 
+                        className="w-auto h-auto rounded-lg " 
+                    />
+                <p className="font-bold text-2xl text-center"> 
                     {userName}
                 </p>
+           </div>
             <button 
                 className={cn(
                     "btn-mic", 
@@ -147,14 +164,26 @@ const CompanionComponent = ({ companionId, subject, name, topic, userName,
 
             </button>
         </div>
-        </section>
-
+         </section>
         <section className="transcript">
-            <div className="transcript-messages no-scrollbar">
-                MESSAGES
+            <div className="transcript-message no-scrollbar">
+                {message.map((message)=>{
+                    if(message.role === 'assistant'){
+                        return (
+                            <p key={message.content} className="max-sm:text-sm">
+                            {name.split(' ')[0].replace('/[.,]/g', '')}; {message.content} 
+                            </p>
+                        )
+                    }else{
+                        return <p key={message.content} className="text-primary max-sm:text-sm">
+                            {userName}: {message.content}
+                        </p>
+                    }
+                })}
             </div>
-            <div className="trascript-fade" />
-        </section>
+            <div className="trascript-fade shrink-0" />
+        </section>  
+   
     </section>
   )
 }
