@@ -19,23 +19,22 @@ const CompaniosLibrary = async ({
   console.log(companions);
   return (
     <main >
-      <section className="flex justify-between gap-4 max-sm:flex-col">
+      <section className="flex justify-between gap-2 max-sm:flex-col">
        <h1>Companions Library</h1>
        <div className="flex gap-4">
          <SearchInput />
          <SubjectFilters />
        </div>
        </section>
-       <section className="flex justify-between gap-4 max-sm:flex-col">
+       <section className="flex justify-between">
         {companions.map((companion) => (
-          <div key={companion.id}>
-            <CompanionCard 
+             <CompanionCard
                   key={companion.id} 
                   {...companion} 
                   color={getSubjectColor(companion.subject)}
             
             />
-          </div>
+          
         ))}
        </section>
     </main>

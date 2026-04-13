@@ -6,21 +6,23 @@ import { getAllCompanions, getRecentSession } from '@/lib/action/companion.actio
 import { getSubjectColor } from '@/lib/utils'
 
 const Page = async() => {
-  // const companions = await getAllCompanions({limit: 3});
-  // const recentSessionCompanions = await getRecentSession(limit : 10);
+  const companions = await getAllCompanions({limit: 3});
+  const recentSessionCompanions = await getRecentSession(10);
+  
+  
   return (
     <main>
       <h1>Popular Companions</h1>
 
       <section className="home-section">
-        {/* {companions.map((companion) => (
+        {companions.map((companion) => (
           <CompanionCard 
             key={companion.id}
             {...companion}
             color={getSubjectColor(companion.subject)}
           />
-        ))} */}
-         <CompanionCard 
+        ))}
+         {/* <CompanionCard 
             id="123"
             name="Neura the Brainy Explorer"
             topic="Neural Networks of the Brain"
@@ -42,13 +44,13 @@ const Page = async() => {
             subject="Language"
             duration={30}
             color="#BDE7FF"
-          />
+          /> */}
       </section>
 
       <section className="home-section">
           <CompanionList 
             title="Recenly completed session"
-            companions={recentSessions}
+            companions={recentSessionCompanions}
             classname="w-2/3 max-lg:w-full"
           />
           <Cta />

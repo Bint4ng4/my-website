@@ -17,10 +17,10 @@ interface CompanionComponentProps {
     classname?: string;
 }
 
+
 const CompanionList = ({ companions, classname }: CompanionComponentProps) => {
   return (
-    <article className={cn('companionlist', classname)}>
-        <h2 className="font-bold text-3xl">Recent Session</h2>
+    <article className={cn('companionlist', classname)} >
         <Table>
             <TableHeader>
                 <TableRow>
@@ -30,7 +30,8 @@ const CompanionList = ({ companions, classname }: CompanionComponentProps) => {
                 </TableRow>
             </TableHeader>
             <TableBody>
-                {companions?.map(({id,subject,name, topic, duration}) => (
+                
+                {companions?.map(({ id, subject, name, topic, duration }) => (
                 <TableRow key={id}>
                 <TableCell> 
                     <Link href={`/companions/${id}`}>
