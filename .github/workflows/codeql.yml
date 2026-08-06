@@ -1,0 +1,51 @@
+name: "CodeQL Advanced"
+
+on:
+  push:
+    branches: [ "master", "deploy" ]  # fix dari template: "master, deploy" (1 string) → 2 branch terpisah
+  pull_request:
+    branches: [ "deploy" ]
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ${{ (matrix.language == 'swift' && 'macos-latest') || 'ubuntu-latest' }}
+    permissions:
+      security-events: write
+      packages: read
+      actions: read
+      contents: read
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:   # fix dari template: indentasi YAML diperbaiki
+          - language: javascript-typescript
+            build-mode: none  # none = tidak perlu build, tidak perlu env/secrets
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7  # sesuai template resmi GitHub
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+          # Aktifkan query suite lebih lengkap (opsional, hapus # untuk mengaktifkan)
+          # queries: security-extended,security-and-quality
+
+      # Step ini hanya berjalan jika build-mode = 'manual'
+      # Untuk javascript-typescript dengan build-mode: none, step ini di-skip otomatis
+      - name: Run manual build steps
+        if: matrix.build-mode == 'manual'
+        shell: bash
+        run: |
+          echo 'Build mode manual tidak dikonfigurasi.'
+          echo 'Ganti build-mode di matrix menjadi none untuk JavaScript/TypeScript.'
+          exit 1
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:${{ matrix.language }}"
