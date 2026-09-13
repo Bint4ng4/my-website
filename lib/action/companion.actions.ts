@@ -2,17 +2,25 @@
 
 import { auth } from "@clerk/nextjs/server";
 import { createSupabaseClient } from "@/lib/supabase";
+import { companionFormSchema } from "@/lib/action/companion.schema";
 
 
 
 //implementation aplication logic
 export const createCompanion = async (formData: CreateCompanion) => {
     const {userId: author } = await auth();
+    if (!author) throw new Error('Unauthorized');
+
+    const parsed = companionFormSchema.safeParse(formData);
+    if (!parsed.success) {
+        throw new Error(parsed.error.issues.map((issue) => issue.message).join(', '));
+    }
+    const { name, subject, topic, voice, style, duration } = parsed.data;
     const supabase = createSupabaseClient();
 
     const { data,error } = await supabase
     .from('companions')
-    .insert({...formData, author})
+    .insert({ name, subject, topic, voice, style, duration, author })
     .select();
 
     if (error || !data) 
@@ -20,22 +28,40 @@ export const createCompanion = async (formData: CreateCompanion) => {
 
     return data[0];
 }
+// PostgREST ilike patterns treat % and _ as wildcards: escape them so user
+// input cannot inject pattern metacharacters.
+const escapeLikePattern = (value: string) =>
+    value.replace(/([%_\\])/g, "\\$1");
+
+// Inside a PostgREST .or() logic expression, , ( ) " . : are expression
+// syntax. Double-quoting the value (embedded quotes doubled) keeps user
+// input a single literal value instead of extra filter conditions.
+const quoteOrValue = (value: string) => `"${value.replace(/"/g, '""')}"`;
+
+const toSafeInt = (value: number | undefined, fallback: number, max: number) => {
+    if (typeof value !== "number" || !Number.isFinite(value)) return fallback;
+    return Math.min(Math.max(Math.floor(value), 1), max);
+};
+
 //u/ limitasi
 export const getAllCompanions = async ({ limit = 10, page = 1, subject, topic }: GetAllCompanions) => {
     try {
         const supabase = createSupabaseClient();
         let query = supabase.from('companions').select();
 
-        if (subject && topic) {
-            query = query.ilike('subject', `%${subject}%`)
-                         .or(`topic.ilike.%${topic}%,name.ilike.%${topic}%`)
-        } else if (subject) {
-            query = query.ilike('subject', `%${subject}%`)
-        } else if (topic) {
-            query = query.or(`topic.ilike.%${topic}%,name.ilike.%${topic}%`)
+        const safeLimit = toSafeInt(limit, 10, 100);
+        const safePage = toSafeInt(page, 1, 10000);
+
+        if (typeof subject === 'string' && typeof topic === 'string' && subject && topic) {
+            query = query.ilike('subject', `%${escapeLikePattern(subject)}%`)
+                         .or(`topic.ilike.${quoteOrValue(`%${escapeLikePattern(topic)}%`)},name.ilike.${quoteOrValue(`%${escapeLikePattern(topic)}%`)}`)
+        } else if (typeof subject === 'string' && subject) {
+            query = query.ilike('subject', `%${escapeLikePattern(subject)}%`)
+        } else if (typeof topic === 'string' && topic) {
+            query = query.or(`topic.ilike.${quoteOrValue(`%${escapeLikePattern(topic)}%`)},name.ilike.${quoteOrValue(`%${escapeLikePattern(topic)}%`)}`)
         }
 
-        query = query.range((page - 1) * limit, page * limit - 1);
+        query = query.range((safePage - 1) * safeLimit, safePage * safeLimit - 1);
 
         const { data: companions, error } = await query;
         
@@ -64,27 +90,50 @@ export const getCompanion = async (id: string) => {
 
 export const addToSessionHistory = async (companionid: string) => {
     const {userId} = await auth();
+    if (!userId) throw new Error('Unauthorized');
+    if (typeof companionid !== 'string' || companionid.length === 0 || companionid.length > 128) {
+        throw new Error('Invalid companion id');
+    }
+
     const supabase = createSupabaseClient();
+
+    const { data: companion } = await supabase
+        .from('companions')
+        .select('id')
+        .eq('id', companionid)
+        .maybeSingle();
+
+    if (!companion) throw new Error('Companion not found');
+
     const {data, error} = await supabase.from('session_history').insert({
         companion_id: companionid,
         user_id : userId,
     })
+
+    if (error) throw new Error(error.message);
 
     return data;
 }
 
 export const getRecentSession = async (limit = 10) => {
     const supabase = createSupabaseClient();
-    const{ data, error} = await supabase
-    .from('recent_unique_sessions')
-    .select('companions:companion_id(*)')
-    .order('created_at', {ascending: false})
-    .limit(limit)
+    const safeLimit = toSafeInt(limit, 10, 100);
+    const { data: sessions, error } = await supabase
+        .rpc('get_recent_unique_sessions', { p_limit: safeLimit });
 
-    if(error) throw new Error(error.message);
+    if (error) throw new Error(error.message);
+    if (!sessions?.length) return [];
 
-    return data.map(({ companions }) => companions);
-    
+    const { data: companions, error: companionsError } = await supabase
+        .from('companions')
+        .select('*')
+        .in('id', sessions.map((s: { companion_id: string }) => s.companion_id));
+
+    if (companionsError) throw new Error(companionsError.message);
+
+    return sessions
+        .map((s: { companion_id: string }) => companions?.find(c => c.id === s.companion_id))
+        .filter(Boolean);
 }
 
     export const getUserSession = async (userId: string, limit = 10) => {
